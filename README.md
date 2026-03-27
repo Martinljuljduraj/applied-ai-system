@@ -22,6 +22,86 @@ Your final app should:
 - Display the plan clearly (and ideally explain the reasoning)
 - Include tests for the most important scheduling behaviors
 
+## UML Design
+
+```mermaid
+classDiagram
+    class Owner {
+        +int id
+        +str name
+        +str email
+        +time available_start
+        +time available_end
+        +add_pet(pet: Pet) None
+        +remove_pet(pet_id: int) None
+        +get_pets() list[Pet]
+    }
+
+    class Pet {
+        +int id
+        +str name
+        +str species
+        +int age
+        +str breed
+        +add_task(task: Task) None
+        +remove_task(task_id: int) None
+        +get_tasks() list[Task]
+    }
+
+    class Task {
+        +int id
+        +str description
+        +int duration_mins
+        +Priority priority
+        +time preferred_time
+        +Frequency frequency
+        +bool is_completed
+        +mark_complete() None
+        +is_due_today() bool
+        +clone_for_today() Task
+    }
+
+    class Priority {
+        <<enumeration>>
+        HIGH
+        MEDIUM
+        LOW
+    }
+
+    class Frequency {
+        <<enumeration>>
+        ONCE
+        DAILY
+        WEEKLY
+    }
+
+    class Scheduler {
+        -Owner owner
+        +generate_schedule() list[ScheduledBlock]
+        +check_conflicts(task: Task) bool
+        +explain_plan() str
+        -_sort_by_priority() list[Task]
+        -_fits_in_window(task: Task, start: time) bool
+    }
+
+    class ScheduledBlock {
+        +str pet_name
+        +Task task
+        +time start_time
+        +time end_time
+        +str reason
+        +to_display_row() dict
+    }
+
+    Owner "1" --> "1..*" Pet : owns
+    Pet "1" --> "0..*" Task : has
+    Scheduler "1" --> "1" Owner : uses
+    Scheduler "1" --> "0..*" ScheduledBlock : produces
+    ScheduledBlock "1" --> "1" Task : wraps
+    Task --> Priority : uses
+    Task --> Frequency : uses
+```
+
 ## Getting started
 
 ### Setup
