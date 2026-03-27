@@ -5,7 +5,11 @@
 **a. Initial design**
 
 - Briefly describe your initial UML design.
+The initial UML design centered on five classes: Owner, Pet, Task, Scheduler, and ScheduledBlock, plus two enums (Priority, Frequency).
+
 - What classes did you include, and what responsibilities did you assign to each?
+The classes I made are the Owner, Pet, Task, Scheduler, and ScheduledBlock. The owner
+can own, add, or remove pets. Pet can be given tasks or tasks removed from Pet. Scheduler takes an owner, collects all tasks across all pets, sorts them by priority, checks for time conflicts, and generates the daily plan within the owner's available hours. The ScheduledBlock has the pet name, task, start and end times along with reason. Task has a description as to what is required, the amount of time it will take to do a particular task in minutes, priority, time it will take place, how frequently the task may be done (if done more than once), and will be mark when completed.
 
 **b. Design changes**
 
