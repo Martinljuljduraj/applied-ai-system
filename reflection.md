@@ -14,7 +14,10 @@ can own, add, or remove pets. Pet can be given tasks or tasks removed from Pet. 
 **b. Design changes**
 
 - Did your design change during implementation?
+Yes
 - If yes, describe at least one change and why you made it.
+The first change made by using AI feedback is adding self._schedule: list[ScheduledBlock] = [] to Scheduler.__init__ because without stored state, methods like check_conflicts() and explain_plan() would have had nothing to inspect — every method would need the schedule passed in as a parameter, making the class awkward and stateless. Keeping the schedule on the instance means generate_schedule() can populate it once, and every other method can reference it naturally. 
+The second change implemented _fits_in_window() because Python's built-in time type does not support arithmetic — adding a timedelta directly to a time object raises a TypeError at runtime. The fix converts both the task's start time and the owner's availability end to full datetime objects using datetime.combine(date.today(), ...), performs the addition safely, then compares the two datetime values. Without this, any attempt to check whether a task fits inside the owner's day would have crashed the moment it ran.
 
 ---
 
