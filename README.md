@@ -22,6 +22,10 @@ Your final app should:
 - Display the plan clearly (and ideally explain the reasoning)
 - Include tests for the most important scheduling behaviors
 
+## Demo
+
+<a href="/course_images/ai110/final_pawpal_demo.png" target="_blank"><img src='/course_images/ai110/final_pawpal_demo.png' width='800' alt='PawPal+ Demo Screenshot'></a>
+
 ## UML Design
 
 ```mermaid
@@ -35,6 +39,7 @@ classDiagram
         +add_pet(pet: Pet) None
         +remove_pet(pet_id: int) None
         +get_pets() list[Pet]
+        +get_tasks_for_pet(pet_name: str) list[Task]
     }
 
     class Pet {
@@ -46,6 +51,7 @@ classDiagram
         +add_task(task: Task) None
         +remove_task(task_id: int) None
         +get_tasks() list[Task]
+        +get_tasks_by_status(completed: bool) list[Task]
     }
 
     class Task {
@@ -56,9 +62,12 @@ classDiagram
         +time preferred_time
         +Frequency frequency
         +bool is_completed
+        +date last_completed_date
+        +date next_due_date
         +mark_complete() None
         +is_due_today() bool
         +clone_for_today() Task
+        +next_occurrence() Task
     }
 
     class Priority {
@@ -77,10 +86,18 @@ classDiagram
 
     class Scheduler {
         -Owner owner
+        -list _schedule
+        -int _total_due
         +generate_schedule() list[ScheduledBlock]
         +check_conflicts(task: Task) bool
+        +get_conflicts() list[str]
+        +complete_task(block: ScheduledBlock) Task
+        +filter_tasks(pet_name, completed) list[ScheduledBlock]
+        +filter_schedule_by_pet(pet_name: str) list[ScheduledBlock]
+        +filter_schedule_by_status(completed: bool) list[ScheduledBlock]
+        +sort_by_time(tasks) list[tuple]
         +explain_plan() str
-        -_sort_by_priority() list[Task]
+        -_sort_by_priority(tasks) list[tuple]
         -_fits_in_window(task: Task, start: time) bool
     }
 
@@ -97,10 +114,43 @@ classDiagram
     Pet "1" --> "0..*" Task : has
     Scheduler "1" --> "1" Owner : uses
     Scheduler "1" --> "0..*" ScheduledBlock : produces
+    Scheduler --> Pet : registers next occurrence
     ScheduledBlock "1" --> "1" Task : wraps
     Task --> Priority : uses
     Task --> Frequency : uses
 ```
+
+## Features
+
+### Scheduling
+- **Priority-based scheduling** — Tasks are ordered HIGH → MEDIUM → LOW. A HIGH task always claims a time slot before any MEDIUM or LOW task, regardless of the order they were added.
+- **Soft preferred-time constraint** — Tasks with a `preferred_time` are delayed to that time if the current slot is earlier. A 6 PM feeding won't be packed in at 8 AM just because a slot is open.
+- **Owner availability window** — Every task must finish before `available_end`. Tasks that would overflow the window are skipped and counted in the summary.
+- **Three-level tie-breaking** — Among tasks of equal priority, the scheduler applies: (1) earlier preferred time first, (2) shorter duration first. Tasks with no preferred time sort last within their group.
+
+### Recurrence
+- **Daily and weekly tasks** — Tasks set to `DAILY` or `WEEKLY` frequency are cloned before scheduling so that completing a scheduled copy never mutates the original task on the pet.
+- **Next-occurrence tracking** — Completing a task via `complete_task()` automatically creates the next instance with `next_due_date` set: +1 day for `DAILY`, +7 days for `WEEKLY`. The new task is registered directly on the pet.
+- **Smart due-date gating** — `is_due_today()` checks `next_due_date` for recurring tasks. A task with `next_due_date = None` (never run) is always treated as due immediately.
+
+### Conflict Detection
+- **Automatic conflict scan** — `get_conflicts()` scans the full schedule for overlapping time blocks across all pets. Uses a sort + single linear pass (O(n log n + n)) instead of a nested loop (O(n²)).
+- **Human-readable warnings** — Each conflict produces a message naming both tasks, their pets, and the overlapping time range.
+- **Back-to-back safety** — Tasks that end exactly when the next one starts are not flagged as conflicts.
+
+### Filtering & Sorting
+- **Filter by status** — `filter_tasks(completed=True/False)` returns only completed or incomplete blocks from the current schedule.
+- **Filter by pet** — `filter_schedule_by_pet(pet_name)` returns all scheduled blocks for a specific pet (case-insensitive).
+- **Sort by time** — `sort_by_time()` reorders any task list by `preferred_time` ascending, with unscheduled tasks placed last. Useful for viewing tasks in the order they will happen rather than by priority.
+
+### Streamlit UI
+- **Persistent session state** — Owner, pet, and scheduler objects live in `st.session_state` and survive page reruns. Adding a task does not reset the owner or schedule.
+- **Color-coded priority badges** — HIGH (🔴), MEDIUM (🟡), LOW (🟢) in the task table.
+- **Live task metrics** — Total tasks, high-priority count, and completed count update as tasks are added.
+- **Schedule summary metrics** — After generating, displays tasks scheduled, total due, and skipped count at a glance.
+- **Conflict warnings in the UI** — If overlapping blocks are detected, an error banner appears with each conflict described and advice on how to resolve it.
+- **Filterable schedule view** — A filter panel appears after schedule generation to show All, Incomplete, or Completed blocks.
+- **Plan explanation** — An expandable "Why this order?" section shows the plain-English reasoning behind the generated schedule.
 
 ## Smarter Scheduling
 

@@ -68,9 +68,9 @@ These tests are important as due dates on a scheduler are important and we don't
 **b. Confidence**
 
 - How confident are you that your scheduler works correctly?
-
+I am very confident that my scheduler works. The functionality has been updated dramatically and I've done several tests on my own just to be sure.
 - What edge cases would you test next if you had more time?
-
+An edge case I would test if I had more time would be scheduling multiple pets. Tasks from two or more different pets being collected, sorted and interleaved is something I could not find the time to test.
 ---
 
 ## 5. Reflection
@@ -78,11 +78,14 @@ These tests are important as due dates on a scheduler are important and we don't
 **a. What went well**
 
 - What part of this project are you most satisfied with?
+I am most satisfied with all of our required tests passing when using pytest as it is a good feeling as a programmer when you get all the green text telling you "17/17 PASSED".
 
 **b. What you would improve**
 
 - If you had another iteration, what would you improve or redesign?
+Making preferred_time a had constraint option. It doesn't reject a time slot for being too early and I wish there was just a bit more time to improve on that.
 
 **c. Key takeaway**
 
 - What is one important thing you learned about designing systems or working with AI on this project?
+One important thing I've learned working with AI on this project is that I believed that I could simply lean on AI to do everything for me. I thought that this would be a simple pet scheduler app. However, I used AI quite a lot on this app and quickly realized that there's a good amount of debugging to do along with truly understanding what the Chatbox is spitting out. It is very good at generating code, yet way better at helping you describe what is going on. It is best practice to use those descriptions and improve on it yourself afterwards. Ultimately, you still have to be the decision maker regardless of the code coming out correctly. 
