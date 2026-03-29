@@ -121,6 +121,45 @@ Several enhancements were made to the core scheduling logic beyond the original 
 
 **Conflict detection** — `get_conflicts()` scans the built schedule for overlapping blocks across all pets and returns a plain-English warning per conflict. Uses a sort + single linear pass (O(n log n)) instead of a nested loop (O(n²)), with direct `time` comparison so no `datetime` conversion is needed.
 
+## Testing PawPal+
+
+The test suite lives in `tests/test_pawpal.py` and covers three core areas.
+
+### Running the tests
+
+```bash
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pytest tests/test_pawpal.py -v
+python3 -m pytest # For MacOS, use to get all tests to pass with green checkmarks in terminal
+```
+
+### What is tested
+
+**Sorting correctness**
+Verifies that `generate_schedule` always returns tasks in HIGH → MEDIUM → LOW priority order, that equal-priority tasks are tie-broken by shorter duration first, and that a pet with no tasks produces an empty schedule without errors.
+
+**Recurrence logic**
+Confirms that completing a `DAILY` task via `Scheduler.complete_task()` registers a new task on the pet with `next_due_date` set to tomorrow, that the new task starts incomplete, and that `ONCE` tasks return `None` with no follow-up queued. Also verifies that a task with `next_due_date=None` (never run) is treated as due immediately.
+
+**Conflict detection**
+Checks that a normally generated schedule is conflict-free, that manually injected overlapping blocks are flagged with a human-readable warning naming both tasks, that back-to-back tasks (end time == next start time) are not reported as conflicts, and that a single-block schedule never conflicts with itself.
+
+### Test count
+
+| Group | Tests |
+|---|---|
+| Sorting correctness | 4 |
+| Recurrence logic | 4 |
+| Conflict detection | 4 |
+| Task / Pet fundamentals (existing) | 5 |
+| **Total** | **17** |
+
+### Confidence Level
+
+**3.5 / 5 stars** — Core scheduling behaviors (priority ordering, recurrence,
+conflict detection) are well-tested. Gaps remain in multi-pet scheduling,
+preferred-time constraints, window overflow, and filter methods.
+
 ## Getting started
 
 ### Setup

@@ -61,8 +61,9 @@ I rejected it as I felt since it is a comment left there for future reference in
 **a. What you tested**
 
 - What behaviors did you test?
-
+I tested the test_daily_next_occurrance_not_due_today function to verify that completed "Daily" task's next copy is not due today. Also, I tests test_daily_next_due_date_is_tomorrow which helps us verify that if a task happens "Daily," its new due date should be today + 1 day.
 - Why were these tests important?
+These tests are important as due dates on a scheduler are important and we don't want to confuse whether or not a task is supposed to occur.
 
 **b. Confidence**
 
