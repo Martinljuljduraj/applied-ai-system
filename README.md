@@ -102,6 +102,25 @@ classDiagram
     Task --> Frequency : uses
 ```
 
+## Smarter Scheduling
+
+Several enhancements were made to the core scheduling logic beyond the original design:
+
+**Preferred time as a soft constraint** — Tasks with a `preferred_time` are no longer just sorted by that value; the scheduler now delays a task's actual start slot to its preferred time if the current slot is earlier. A feeding task set for 6 PM won't be packed in at 8 AM just because a slot is open.
+
+**Recurring task cloning** — `DAILY` and `WEEKLY` tasks are cloned before being placed in the schedule so that calling `mark_complete()` on a scheduled block never mutates the original task on the pet.
+
+**Accurate next-occurrence dates** — When a recurring task is completed via `Scheduler.complete_task()`, the next occurrence is created with `next_due_date` set using `timedelta`: +1 day for `DAILY`, +7 days for `WEEKLY`. `is_due_today()` gates on this date instead of always returning `True` for daily tasks.
+
+**Filtering** — Three new methods let you slice the schedule without re-generating it:
+- `filter_tasks(pet_name, completed)` — filter by pet, status, or both
+- `filter_schedule_by_pet(pet_name)` — blocks for one pet
+- `filter_schedule_by_status(completed)` — pending or done blocks only
+
+**Chronological sort** — `sort_by_time()` sorts any task list by `preferred_time` ascending, with unscheduled tasks placed last. Useful for displaying tasks in the order the owner will do them rather than by priority.
+
+**Conflict detection** — `get_conflicts()` scans the built schedule for overlapping blocks across all pets and returns a plain-English warning per conflict. Uses a sort + single linear pass (O(n log n)) instead of a nested loop (O(n²)), with direct `time` comparison so no `datetime` conversion is needed.
+
 ## Getting started
 
 ### Setup

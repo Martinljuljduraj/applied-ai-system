@@ -26,13 +26,16 @@ The second change implemented _fits_in_window() because Python's built-in time t
 **a. Constraints and priorities**
 
 - What constraints does your scheduler consider (for example: time, priority, preferences)?
+The constraints our scheduler considers is, for one, the tasks that are ranked in priority from HIGH, MEDIUM, LOW and scheduled in that order. A preference I've made is that tasks can choose to specify a preferred_time. Made sure that every task must fit between available_start and available_end.
 - How did you decide which constraints mattered most?
+The constraint that matters most is the priority. Prioritizing which tasks need to be completed is the whole point of a scheduler in the first place. Availability is also just as important because if a schedule runs outside the hours in which the Owner isn't home then that wouldn't make sense in the first place.
 
 **b. Tradeoffs**
 
 - Describe one tradeoff your scheduler makes.
+Each task starts exactly when the previous one ends, ignoring preferred_time as a hard start time.
 - Why is that tradeoff reasonable for this scenario?
-
+For a pet care app, getting all high-priority tasks done matters more than hitting an exact preferred time.
 ---
 
 ## 3. AI Collaboration
@@ -40,12 +43,16 @@ The second change implemented _fits_in_window() because Python's built-in time t
 **a. How you used AI**
 
 - How did you use AI tools during this project (for example: design brainstorming, debugging, refactoring)?
+I used AI (particularly Claude Code inside VS Code) for brainstorming the UML diagram. I also used AI for debugging when, for example, there was no data for the tasks that can now be run and printed in main.py.
 - What kinds of prompts or questions were most helpful?
+The prompt I made in which gave me the code for mermaid.live and visualizing the UML diagram helped immensely in seeing the structure of the classes and also how certain code needs to be written.
 
 **b. Judgment and verification**
 
 - Describe one moment where you did not accept an AI suggestion as-is.
+AI attempted to condense a docstring on line 147 in pawpal_system.py into a one-liner.
 - How did you evaluate or verify what the AI suggested?
+I rejected it as I felt since it is a comment left there for future reference in this project, having comments in one line will be annoying (at least for me personally) for debugging purposes in the code that follows it. It may be such a small detail in the grand scheme of this project yet I prefer to keep everything readily available and as easy to understand.
 
 ---
 
@@ -54,11 +61,13 @@ The second change implemented _fits_in_window() because Python's built-in time t
 **a. What you tested**
 
 - What behaviors did you test?
+
 - Why were these tests important?
 
 **b. Confidence**
 
 - How confident are you that your scheduler works correctly?
+
 - What edge cases would you test next if you had more time?
 
 ---
