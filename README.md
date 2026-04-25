@@ -146,6 +146,12 @@ See `model_card.md` for full testing results and reliability details.
 
 ---
 
+## Portfolio reflection
+
+PawPal+ was a project that already had solid logic for scheduling, and I decided to add an AI component to it using Claude. Adding structured logging, error handling, and a test suite were important in my view to this project regardless if this app worked as intended. Yes, one can take this code, schedule a task and use the AI advisor with no issues, but to make things less tricky for myself and the intended user, having all these features is what I needed to put in place in order to be satisfied as an AI engineer.
+
+---
+
 ## Demo walkthrough
 
 [Loom video link — add before submission]
