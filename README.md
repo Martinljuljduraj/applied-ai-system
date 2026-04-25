@@ -1,231 +1,163 @@
-# PawPal+ (Module 2 Project)
+# PawPal+ Applied AI System
 
-You are building **PawPal+**, a Streamlit app that helps a pet owner plan care tasks for their pet.
+**Base project:** PawPal+ (Module 2) — A priority-based pet care scheduler built with Python and Streamlit.
 
-## Scenario
+PawPal+ originally helped pet owners manage daily care tasks by generating a priority-ordered, conflict-free schedule. This version evolves that prototype into a full applied AI system by adding a context-aware AI advisor powered by structured logging, and a complete test suite — turning a scheduling tool into an intelligent pet care assistant.
 
-A busy pet owner needs help staying consistent with pet care. They want an assistant that can:
+---
 
-- Track pet care tasks (walks, feeding, meds, enrichment, grooming, etc.)
-- Consider constraints (time available, priority, owner preferences)
-- Produce a daily plan and explain why it chose that plan
+## What this project does
 
-Your job is to design the system first (UML), then implement the logic in Python, then connect it to the Streamlit UI.
+PawPal+ helps busy pet owners stay consistent with their pet's care. It combines a rule-based scheduler with an AI advisor that reads your pet's profile and current task list, then gives personalized, actionable recommendations in real time.
 
-## What you will build
+**Why it matters:** Pet care is easy to forget or deprioritize. PawPal+ removes the guesswork by both organizing tasks intelligently and giving owners AI guidance tailored to their specific animal.
 
-Your final app should:
+---
 
-- Let a user enter basic owner + pet info
-- Let a user add/edit tasks (duration + priority at minimum)
-- Generate a daily schedule/plan based on constraints and priorities
-- Display the plan clearly (and ideally explain the reasoning)
-- Include tests for the most important scheduling behaviors
+## System architecture
 
-## Demo
+![System Architecture Diagram](assets/architecture.png)
 
-<a href="/course_images/ai110/final_pawpal_demo.png" target="_blank"><img src='/course_images/ai110/final_pawpal_demo.png' width='800' alt='PawPal+ Demo Screenshot'></a>
+The system has three layers:
 
-## UML Design
+**Data layer** — `Owner`, `Pet`, `Task`, and `ScheduledBlock` dataclasses in `pawpal_system.py` hold all session state.
 
-```mermaid
-classDiagram
-    class Owner {
-        +int id
-        +str name
-        +str email
-        +time available_start
-        +time available_end
-        +add_pet(pet: Pet) None
-        +remove_pet(pet_id: int) None
-        +get_pets() list[Pet]
-        +get_tasks_for_pet(pet_name: str) list[Task]
-    }
+**Logic layer** — The `Scheduler` class generates a priority-ordered, conflict-free daily plan. The `ai_advisor.py` module passes live pet context to Claude and returns structured task suggestions.
 
-    class Pet {
-        +int id
-        +str name
-        +str species
-        +int age
-        +str breed
-        +add_task(task: Task) None
-        +remove_task(task_id: int) None
-        +get_tasks() list[Task]
-        +get_tasks_by_status(completed: bool) list[Task]
-    }
+**UI layer** — `app.py` connects everything in a two-tab Streamlit interface: the Scheduler tab for managing tasks and the AI Advisor tab for chat-based pet care guidance.
 
-    class Task {
-        +int id
-        +str description
-        +int duration_mins
-        +Priority priority
-        +time preferred_time
-        +Frequency frequency
-        +bool is_completed
-        +date last_completed_date
-        +date next_due_date
-        +mark_complete() None
-        +is_due_today() bool
-        +clone_for_today() Task
-        +next_occurrence() Task
-    }
+Data flows: user input → pet/owner objects → scheduler generates plan → AI advisor reads context → Claude returns suggestions → user sees results in UI. Every AI interaction is logged automatically.
 
-    class Priority {
-        <<enumeration>>
-        HIGH
-        MEDIUM
-        LOW
-    }
+---
 
-    class Frequency {
-        <<enumeration>>
-        ONCE
-        DAILY
-        WEEKLY
-    }
+## AI feature: Agentic Workflow
 
-    class Scheduler {
-        -Owner owner
-        -list _schedule
-        -int _total_due
-        +generate_schedule() list[ScheduledBlock]
-        +check_conflicts(task: Task) bool
-        +get_conflicts() list[str]
-        +complete_task(block: ScheduledBlock) Task
-        +filter_tasks(pet_name, completed) list[ScheduledBlock]
-        +filter_schedule_by_pet(pet_name: str) list[ScheduledBlock]
-        +filter_schedule_by_status(completed: bool) list[ScheduledBlock]
-        +sort_by_time(tasks) list[tuple]
-        +explain_plan() str
-        -_sort_by_priority(tasks) list[tuple]
-        -_fits_in_window(task: Task, start: time) bool
-    }
+The AI Advisor is an agentic workflow because it does not answer generic questions — it reads the live state of the app and reasons about what is needed for that specific pet.
 
-    class ScheduledBlock {
-        +str pet_name
-        +Task task
-        +time start_time
-        +time end_time
-        +str reason
-        +to_display_row() dict
-    }
+When a user submits a message, the system automatically:
 
-    Owner "1" --> "1..*" Pet : owns
-    Pet "1" --> "0..*" Task : has
-    Scheduler "1" --> "1" Owner : uses
-    Scheduler "1" --> "0..*" ScheduledBlock : produces
-    Scheduler --> Pet : registers next occurrence
-    ScheduledBlock "1" --> "1" Task : wraps
-    Task --> Priority : uses
-    Task --> Frequency : uses
-```
+1. Gathers the current pet's name, species, and scheduled task list from session state
+2. Passes that context to Claude as a structured system prompt
+3. Claude reasons about what care tasks are missing or recommended for that animal
+4. Returns structured suggestions in a consistent format: `Task: [name] | Duration: [X] mins | Priority: [HIGH/MEDIUM/LOW]`
+5. Logs every interaction to `logs/pawpal_ai_log.jsonl` with timestamp, context, and success status
 
-## Features
+The AI's output is shaped by the pet's real data — not a generic prompt — making it genuinely context-aware rather than just a chatbot.
 
-### Scheduling
-- **Priority-based scheduling** — Tasks are ordered HIGH → MEDIUM → LOW. A HIGH task always claims a time slot before any MEDIUM or LOW task, regardless of the order they were added.
-- **Soft preferred-time constraint** — Tasks with a `preferred_time` are delayed to that time if the current slot is earlier. A 6 PM feeding won't be packed in at 8 AM just because a slot is open.
-- **Owner availability window** — Every task must finish before `available_end`. Tasks that would overflow the window are skipped and counted in the summary.
-- **Three-level tie-breaking** — Among tasks of equal priority, the scheduler applies: (1) earlier preferred time first, (2) shorter duration first. Tasks with no preferred time sort last within their group.
+---
 
-### Recurrence
-- **Daily and weekly tasks** — Tasks set to `DAILY` or `WEEKLY` frequency are cloned before scheduling so that completing a scheduled copy never mutates the original task on the pet.
-- **Next-occurrence tracking** — Completing a task via `complete_task()` automatically creates the next instance with `next_due_date` set: +1 day for `DAILY`, +7 days for `WEEKLY`. The new task is registered directly on the pet.
-- **Smart due-date gating** — `is_due_today()` checks `next_due_date` for recurring tasks. A task with `next_due_date = None` (never run) is always treated as due immediately.
+## Setup instructions
 
-### Conflict Detection
-- **Automatic conflict scan** — `get_conflicts()` scans the full schedule for overlapping time blocks across all pets. Uses a sort + single linear pass (O(n log n + n)) instead of a nested loop (O(n²)).
-- **Human-readable warnings** — Each conflict produces a message naming both tasks, their pets, and the overlapping time range.
-- **Back-to-back safety** — Tasks that end exactly when the next one starts are not flagged as conflicts.
-
-### Filtering & Sorting
-- **Filter by status** — `filter_tasks(completed=True/False)` returns only completed or incomplete blocks from the current schedule.
-- **Filter by pet** — `filter_schedule_by_pet(pet_name)` returns all scheduled blocks for a specific pet (case-insensitive).
-- **Sort by time** — `sort_by_time()` reorders any task list by `preferred_time` ascending, with unscheduled tasks placed last. Useful for viewing tasks in the order they will happen rather than by priority.
-
-### Streamlit UI
-- **Persistent session state** — Owner, pet, and scheduler objects live in `st.session_state` and survive page reruns. Adding a task does not reset the owner or schedule.
-- **Color-coded priority badges** — HIGH (🔴), MEDIUM (🟡), LOW (🟢) in the task table.
-- **Live task metrics** — Total tasks, high-priority count, and completed count update as tasks are added.
-- **Schedule summary metrics** — After generating, displays tasks scheduled, total due, and skipped count at a glance.
-- **Conflict warnings in the UI** — If overlapping blocks are detected, an error banner appears with each conflict described and advice on how to resolve it.
-- **Filterable schedule view** — A filter panel appears after schedule generation to show All, Incomplete, or Completed blocks.
-- **Plan explanation** — An expandable "Why this order?" section shows the plain-English reasoning behind the generated schedule.
-
-## Smarter Scheduling
-
-Several enhancements were made to the core scheduling logic beyond the original design:
-
-**Preferred time as a soft constraint** — Tasks with a `preferred_time` are no longer just sorted by that value; the scheduler now delays a task's actual start slot to its preferred time if the current slot is earlier. A feeding task set for 6 PM won't be packed in at 8 AM just because a slot is open.
-
-**Recurring task cloning** — `DAILY` and `WEEKLY` tasks are cloned before being placed in the schedule so that calling `mark_complete()` on a scheduled block never mutates the original task on the pet.
-
-**Accurate next-occurrence dates** — When a recurring task is completed via `Scheduler.complete_task()`, the next occurrence is created with `next_due_date` set using `timedelta`: +1 day for `DAILY`, +7 days for `WEEKLY`. `is_due_today()` gates on this date instead of always returning `True` for daily tasks.
-
-**Filtering** — Three new methods let you slice the schedule without re-generating it:
-- `filter_tasks(pet_name, completed)` — filter by pet, status, or both
-- `filter_schedule_by_pet(pet_name)` — blocks for one pet
-- `filter_schedule_by_status(completed)` — pending or done blocks only
-
-**Chronological sort** — `sort_by_time()` sorts any task list by `preferred_time` ascending, with unscheduled tasks placed last. Useful for displaying tasks in the order the owner will do them rather than by priority.
-
-**Conflict detection** — `get_conflicts()` scans the built schedule for overlapping blocks across all pets and returns a plain-English warning per conflict. Uses a sort + single linear pass (O(n log n)) instead of a nested loop (O(n²)), with direct `time` comparison so no `datetime` conversion is needed.
-
-## Testing PawPal+
-
-The test suite lives in `tests/test_pawpal.py` and covers three core areas.
-
-### Running the tests
+### 1. Clone the repo
 
 ```bash
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pytest tests/test_pawpal.py -v
-python3 -m pytest # For MacOS, use to get all tests to pass with green checkmarks in terminal
+git clone https://github.com/Martinljuljduraj/applied-ai-system.git
+cd applied-ai-system
 ```
 
-### What is tested
-
-**Sorting correctness**
-Verifies that `generate_schedule` always returns tasks in HIGH → MEDIUM → LOW priority order, that equal-priority tasks are tie-broken by shorter duration first, and that a pet with no tasks produces an empty schedule without errors.
-
-**Recurrence logic**
-Confirms that completing a `DAILY` task via `Scheduler.complete_task()` registers a new task on the pet with `next_due_date` set to tomorrow, that the new task starts incomplete, and that `ONCE` tasks return `None` with no follow-up queued. Also verifies that a task with `next_due_date=None` (never run) is treated as due immediately.
-
-**Conflict detection**
-Checks that a normally generated schedule is conflict-free, that manually injected overlapping blocks are flagged with a human-readable warning naming both tasks, that back-to-back tasks (end time == next start time) are not reported as conflicts, and that a single-block schedule never conflicts with itself.
-
-### Test count
-
-| Group | Tests |
-|---|---|
-| Sorting correctness | 4 |
-| Recurrence logic | 4 |
-| Conflict detection | 4 |
-| Task / Pet fundamentals (existing) | 5 |
-| **Total** | **17** |
-
-### Confidence Level
-
-**3.5 / 5 stars** — Core scheduling behaviors (priority ordering, recurrence,
-conflict detection) are well-tested. Gaps remain in multi-pet scheduling,
-preferred-time constraints, window overflow, and filter methods.
-
-## Getting started
-
-### Setup
+### 2. Create and activate a virtual environment
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+On Windows:
+```bash
+.venv\Scripts\activate
+```
+
+### 3. Install dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
-### Suggested workflow
+### 4. Add your Anthropic API key
 
-1. Read the scenario carefully and identify requirements and edge cases.
-2. Draft a UML diagram (classes, attributes, methods, relationships).
-3. Convert UML into Python class stubs (no logic yet).
-4. Implement scheduling logic in small increments.
-5. Add tests to verify key behaviors.
-6. Connect your logic to the Streamlit UI in `app.py`.
-7. Refine UML so it matches what you actually built.
+Create a `.env` file in the project root:
+
+```
+ANTHROPIC_API_KEY=your-api-key-here
+```
+
+Get a key at [console.anthropic.com](https://console.anthropic.com). A small amount of credits ($5) is required — this project uses a negligible fraction of that.
+
+### 5. Run the app
+
+```bash
+streamlit run app.py
+```
+
+---
+
+## Sample interactions
+
+**Input:** "What daily tasks should I add for my dog Zoe?"
+
+**Output:**
+```
+Task: Feeding | Duration: 10 mins | Priority: HIGH
+Task: Fresh Water Refill | Duration: 5 mins | Priority: HIGH
+Task: Evening Walk | Duration: 20 mins | Priority: HIGH
+Task: Playtime | Duration: 15 mins | Priority: MEDIUM
+Task: Dental Care | Duration: 5 mins | Priority: MEDIUM
+```
+
+**Input:** "How often should I brush a Labrador?"
+
+**Output:** The AI explains brushing frequency based on breed and coat type, and suggests a task to add to the schedule.
+
+**Input:** "My cat seems lethargic — what should I watch for?"
+
+**Output:** The AI outlines behavioral signs to monitor and recommends scheduling a vet check task at HIGH priority.
+
+---
+
+## Reliability and logging
+
+Every AI interaction is automatically logged to `logs/pawpal_ai_log.jsonl` with the following fields: timestamp, pet context, user message, AI response, and success status. All errors are caught and return a safe message to the user instead of crashing the app.
+
+The scheduler has 17 passing unit tests covering priority ordering, recurrence logic, and conflict detection:
+
+```bash
+python3 -m pytest tests/test_pawpal.py -v
+```
+
+---
+
+## Design decisions
+
+**Why Claude over a rules-based suggestion engine?** A rules-based system would require manually maintaining a database of species-specific care guidelines. Claude already has that knowledge and can reason across species, breeds, ages, and edge cases without any maintenance.
+
+**Why log to JSONL?** Each interaction is a self-contained JSON object on its own line, making it easy to parse, filter, or feed into an evaluation script without loading the entire file.
+
+**Why keep the scheduler rule-based?** The scheduling logic — priority ordering, conflict detection, recurrence — is deterministic and well-tested. Replacing it with AI would make behavior unpredictable and harder to verify. The two systems complement each other: rules for structure, AI for guidance.
+
+**Why not store chat history across sessions?** The AI advisor is designed for in-session guidance rather than long-term memory. Each session starts fresh so the owner can get advice for whichever pet they set up that day.
+
+---
+
+## Testing summary
+
+All 17 scheduler unit tests pass. The AI advisor handles errors gracefully — when the API is unavailable or returns an error, the app displays a safe fallback message instead of crashing, and the failure is logged with full context. Edge cases tested include empty task lists, missing pet context, and API authentication failures.
+
+See `model_card.md` for full testing results and reliability details.
+
+---
+
+## Demo walkthrough
+
+[Loom video link — add before submission]
+
+---
+
+## Reflection and ethics
+
+See `model_card.md` for the full reflection covering limitations, potential misuse, testing surprises, and AI collaboration notes.
+
+---
+
+## Project evolution
+
+This project evolved from PawPal+ (Module 2), which was a pure Python scheduling app with no AI. The original goals were to track pet care tasks, apply priority-based scheduling, and detect scheduling conflicts. This version keeps all of that and adds a live AI advisor that makes the system genuinely intelligent rather than just organized. The addition of structured logging and a test suite also brings the project to a professional standard where someone else could clone and run it without guessing what to install or how it behaves.
