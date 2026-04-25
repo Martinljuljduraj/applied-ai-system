@@ -154,7 +154,7 @@ PawPal+ was a project that already had solid logic for scheduling, and I decided
 
 ## Demo walkthrough
 
-[Loom video link — add before submission]
+(https://www.loom.com/share/bbeefc759a9447728f819577f5b3cc1b)
 
 ---
 
