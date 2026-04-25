@@ -10,7 +10,7 @@ or a relevant keyword for non-task questions.
 
 import sys
 import os
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from ai_advisor import get_ai_advice
 
